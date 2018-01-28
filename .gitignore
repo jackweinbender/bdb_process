@@ -2,4 +2,4 @@
 venv
 _*
 test_pages
-images_raw_ppm
+images_raw_ppm*
