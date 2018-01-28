@@ -92,10 +92,13 @@ def process(file):
 	page_num = file.split("-")
 	page_num = page_num[1].split(".")[0]
 	
-	cv2.imwrite(f"../image_processing/_headers/{page_num}_header.png", header)
-	cv2.imwrite(f"../image_processing/_pages/{page_num}.png", body)
+	cv2.imwrite(f"_headers/{page_num}_header.png", header)
+	cv2.imwrite(f"_pages/{page_num}.png", body)
 
 
 os.chdir("test_pages")
+os.makedirs("_headers", exist_ok=True)
+os.makedirs("_pages", exist_ok=True)
+
 for file in glob.glob("*.ppm"):
 	process(file)

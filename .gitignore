@@ -1,3 +1,4 @@
 .DS_Store
-images_raw_ppm*
 venv
+test_pages/*
+images_raw_ppm*
