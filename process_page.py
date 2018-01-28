@@ -29,7 +29,7 @@ def main(args):
 		cv2.imwrite(f"{current}/{page_num}_col_a.png", col_a)
 		cv2.imwrite(f"{current}/{page_num}_col_b.png", col_b)
 
-		complete = "99_complete"
+		complete = "_COMPLETE"
 		os.makedirs(complete, exist_ok=True)
 		os.rename(file, f"{complete}/{filename}")
 
