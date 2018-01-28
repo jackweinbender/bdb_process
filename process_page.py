@@ -9,10 +9,17 @@ def main(args):
 	current_dir = sys.path[0]
 
 	for file in glob.glob(f"{args[1]}/*.ppm"):
+		page_num = get_page_num(file)
+		filename = file.split("/")[-1]
+		print(f'Page: {page_num}')
 		head, page, col_a, col_b, original = process(file)
 
+		if head == []:
+			os.makedirs("_PROBLEMS", exist_ok=True)
+			os.rename(file, f"_PROBLEMS/{filename}")
+			continue
+
 		## Write-out Files
-		page_num = get_page_num(file)
 		current = f"{current_dir}/_pages/page_{page_num}"
 		os.makedirs(current, exist_ok=True)
 
@@ -22,9 +29,11 @@ def main(args):
 		cv2.imwrite(f"{current}/{page_num}_col_a.png", col_a)
 		cv2.imwrite(f"{current}/{page_num}_col_b.png", col_b)
 
+		complete = "99_complete"
+		os.makedirs(complete, exist_ok=True)
+		os.rename(file, f"{complete}/{filename}")
+
 def process(file):
-	print(f"---------------------------------------")
-	print(f"Processing file: {file}")
 	img = cv2.imread(file, 0)
 
 	## Threshold and Box-filter for noise
@@ -32,7 +41,7 @@ def process(file):
 	# Deskew
 	data, result = deskew(data, img)
 	# Crop
-	data, result = crop(data, result)
+	data, cropped = crop(data, result)
 
 	# Dilation vertical
 	kernel = np.zeros((3,3), dtype=np.uint8)
@@ -55,15 +64,17 @@ def process(file):
 	pageline = upper_bounds[0]
 
 	# Do REAL Image Manipulations
-	header = result[0:headline,:]
-	page = result[pageline:,:]
+	header = cropped[0:headline,:]
+	page = cropped[pageline:,:]
 	
-	col_a, col_b = split_cols(page)
-	
-	return (header, page, col_a, col_b, img)
+	col_a, col_b = split_cols(page, file)
+	if col_a == [] or col_b == []:
+		return ([], [], [], [], [])
+
+	return (header, page, col_a, col_b, cropped)
 
 
-def split_cols(page):
+def split_cols(page, file):
 	data = remove_noise(page)
 
 	x_sum = np.mean(data, axis=0)
@@ -71,8 +82,15 @@ def split_cols(page):
 	Y,X = data.shape[:2]
 	xth = 10
 
-	end_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x-1]>xth]
-	start_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x+1]>xth]
+	
+
+	end_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x-1]>xth and x > 420 and x < 460]
+	start_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x+1]>xth and x > 440 and x < 480]
+
+	print(end_cols, start_cols)
+
+	if len(end_cols) < 1 or len(start_cols) < 1:
+		return ([], [])
 
 	end_col_l = end_cols[0]
 	start_col_r = start_cols[0]
@@ -81,7 +99,16 @@ def split_cols(page):
 	col_a = page[:,0:end_col_l]
 	col_b = page[:,start_col_r:]
 
-	return (col_a, col_b)
+	# cv2.imshow("DATA", data)
+	# cv2.waitKey(0)
+	# cv2.destroyAllWindows()
+
+	if len(col_a[0]) < 10:
+		raise Exception(f"Col A")
+	elif len(col_b[0]) < 10:
+		raise Exception(f"Col B")
+	else:
+		return (col_a, col_b)
 
 def get_page_num(file):
 	return file.split("-")[1].split(".")[0]
