@@ -1,59 +1,28 @@
-#! /bin/python3
+#! /usr/local/bin/python3
+
 import sys
 import cv2
 import numpy as np
 import glob, os
 
+def main(args):
+	os.chdir(args[1])
+	os.makedirs("_headers", exist_ok=True)
+	os.makedirs("_pages", exist_ok=True)
+	for file in glob.glob("*.ppm"):
+		process(file)
+
 def process(file):
-	print(file)
+	print(f"---------------------------------------")
+	print(f"Processing file: {file}")
 	img = cv2.imread(file, 0)
 
 	## Threshold and Box-filter for noise
-	data = cv2.medianBlur(img, 9)
-	th, data = cv2.threshold(data, 55, 255, cv2.THRESH_BINARY_INV|cv2.THRESH_OTSU)
-	data = cv2.boxFilter(data, -1, (30,30))
-	th, data = cv2.threshold(data, 25, 255, cv2.THRESH_BINARY)
-
-	# ## SHOW DENOISED
-	# cv2.imshow("Denoised", data)
-	# cv2.imshow("Original", img)
-	# cv2.waitKey(0)
-	# cv2.destroyAllWindows()
-
-	## Find MinArea for Rotation
-	pts = cv2.findNonZero(data)
-	ret = cv2.minAreaRect(pts)
-
-	(cx,cy), (w,h), ang = ret
-	if w>h:
-		w,h = h,w
-		ang += 90
-
-	## Find Matrix and do Rotation
-	M = cv2.getRotationMatrix2D((cx,cy), ang, 1.0)
-	data = cv2.warpAffine(data, M, (img.shape[1], img.shape[0]))
-	result = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
-	
-	## Find MinRectArea for Cropping
-	pts = cv2.findNonZero(data)
-	ret = cv2.minAreaRect(pts)
-	box = cv2.boxPoints(ret)
-
-
-	## Crop by slicing
-	start_x = int(box[0,0])
-	end_x = int(box[2,0])
-
-	start_y = int(box[1,1])
-	end_y = int(box[0,1])
-
-	result = result[start_y:end_y, start_x:end_x]
-	data = data[start_y:end_y, start_x:end_x]
-
-	# # # SHOW CROPPED
-	# cv2.imshow("Cropped", result)
-	# cv2.waitKey(0)
-	# cv2.destroyAllWindows()
+	data = remove_noise(img)
+	# Deskew
+	data, result = deskew(data, img)
+	# Crop
+	data, result = crop(data, result)
 
 	# Dilation vertical
 	kernel = np.zeros((3,3), dtype=np.uint8)
@@ -73,32 +42,68 @@ def process(file):
 	upper_bounds = [y for y in range(Y-1) if y_sum[y]<=yth and y_sum[y+1]>yth]
 
 	headline = lower_bounds[0]
-	bodyline = upper_bounds[0]
+	pageline = upper_bounds[0]
 
 	# Do DAtA Image Manipulations
 	data_header = data[0:headline,:]
 
 	# Do REAL Image Manipulations
 	header = result[0:headline,:]
-	body = result[bodyline:,:]
+	page = result[pageline:,:]
 
-	# cv2.imshow("DATA", data)
-	# cv2.imshow("HEAD", header)
-	# cv2.imshow("BODY", body)
+	write_header(file, header)
+	write_page(file, page)
 
-	cv2.waitKey(0)
-	cv2.destroyAllWindows()
+def write_page(file, page):
+	page_num = get_page_num(file)
+	cv2.imwrite(f"_pages/page_{page_num}.png", page)
 
-	page_num = file.split("-")
-	page_num = page_num[1].split(".")[0]
-	
-	cv2.imwrite(f"_headers/{page_num}_header.png", header)
-	cv2.imwrite(f"_pages/{page_num}.png", body)
+def write_header(file, header):
+	page_num = get_page_num(file)
+	cv2.imwrite(f"_headers/header_{page_num}.png", header)
+
+def get_page_num(file):
+	return file.split("-")[1].split(".")[0]
+
+def remove_noise(data):
+	data = cv2.medianBlur(data, 9)
+	th, data = cv2.threshold(data, 55, 255, cv2.THRESH_BINARY_INV|cv2.THRESH_OTSU)
+	data = cv2.boxFilter(data, -1, (30,30))
+	th, data = cv2.threshold(data, 25, 255, cv2.THRESH_BINARY)
+	return data
+
+def deskew(data, img):
+	## Find MinArea for Rotation
+	pts = cv2.findNonZero(data)
+	ret = cv2.minAreaRect(pts)
+
+	(cx,cy), (w,h), ang = ret
+	if w>h:
+		w,h = h,w
+		ang += 90
+
+	## Find Matrix and do Rotation
+	M = cv2.getRotationMatrix2D((cx,cy), ang, 1.0)
+	data = cv2.warpAffine(data, M, (img.shape[1], img.shape[0]))
+	result = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
+	return (data, result)
+
+def crop(data, img):
+	## Find MinRectArea for Cropping
+	pts = cv2.findNonZero(data)
+	ret = cv2.minAreaRect(pts)
+	box = cv2.boxPoints(ret)
 
 
-os.chdir("test_pages")
-os.makedirs("_headers", exist_ok=True)
-os.makedirs("_pages", exist_ok=True)
+	## Crop by slicing
+	start_x = int(box[0,0])
+	end_x = int(box[2,0])
 
-for file in glob.glob("*.ppm"):
-	process(file)
+	start_y = int(box[1,1])
+	end_y = int(box[0,1])
+
+	img = img[start_y:end_y, start_x:end_x]
+	data = data[start_y:end_y, start_x:end_x]
+	return (data, img)
+
+main(sys.argv)
