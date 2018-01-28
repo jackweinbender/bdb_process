@@ -2,3 +2,5 @@
 venv
 test_pages/*
 images_raw_ppm*
+jastrow_complete.pdf
+.vscode
