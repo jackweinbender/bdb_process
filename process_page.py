@@ -15,8 +15,8 @@ def main(args):
 		head, page, col_a, col_b, original = process(file)
 
 		if head == []:
-			os.makedirs("_PROBLEMS", exist_ok=True)
-			os.rename(file, f"_PROBLEMS/{filename}")
+			os.makedirs("_OUTPUT/_PROBLEMS", exist_ok=True)
+			os.rename(file, f"_OUTPUT/_PROBLEMS/{filename}")
 			continue
 
 		## Write-out Files
@@ -29,7 +29,7 @@ def main(args):
 		cv2.imwrite(f"{current}/{page_num}_col_a.png", col_a)
 		cv2.imwrite(f"{current}/{page_num}_col_b.png", col_b)
 
-		complete = "_COMPLETE"
+		complete = "_OUTPUT/complete"
 		os.makedirs(complete, exist_ok=True)
 		os.rename(file, f"{complete}/{filename}")
 
