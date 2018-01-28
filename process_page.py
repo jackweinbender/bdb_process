@@ -6,11 +6,20 @@ import numpy as np
 import glob, os
 
 def main(args):
-	os.chdir(args[1])
-	os.makedirs("_headers", exist_ok=True)
-	os.makedirs("_pages", exist_ok=True)
-	for file in glob.glob("*.ppm"):
-		process(file)
+	current_dir = sys.path[0]
+
+	for file in glob.glob(f"{args[1]}/*.ppm"):
+		head, page, col_a, col_b = process(file)
+
+		## Write-out Files
+		page_num = get_page_num(file)
+		current = f"{current_dir}/_pages/page_{page_num}"
+		os.makedirs(current, exist_ok=True)
+
+		cv2.imwrite(f"{current}/{page_num}_head.png", head)
+		cv2.imwrite(f"{current}/{page_num}_page.png", page)
+		cv2.imwrite(f"{current}/{page_num}_col_a.png", col_a)
+		cv2.imwrite(f"{current}/{page_num}_col_b.png", col_b)
 
 def process(file):
 	print(f"---------------------------------------")
@@ -47,11 +56,11 @@ def process(file):
 	# Do REAL Image Manipulations
 	header = result[0:headline,:]
 	page = result[pageline:,:]
-
-	write_header(file, header)
-
+	
 	col_a, col_b = split_cols(page)
-	write_cols(file, (col_a, col_b))
+	
+	return (header, page, col_a, col_b)
+
 
 def split_cols(page):
 	data = remove_noise(page)
@@ -72,16 +81,6 @@ def split_cols(page):
 	col_b = page[:,start_col_r:]
 
 	return (col_a, col_b)
-
-def write_cols(file, cols):
-	page_num = get_page_num(file)
-	col_a, col_b = cols
-	cv2.imwrite(f"_pages/page_{page_num}a.png", col_a)
-	cv2.imwrite(f"_pages/page_{page_num}b.png", col_b)
-
-def write_header(file, header):
-	page_num = get_page_num(file)
-	cv2.imwrite(f"_headers/header_{page_num}.png", header)
 
 def get_page_num(file):
 	return file.split("-")[1].split(".")[0]

@@ -1,5 +1,6 @@
 .DS_Store
 venv
 test_pages/*
+_pages
 images_raw_ppm*
 jastrow_complete.pdf
