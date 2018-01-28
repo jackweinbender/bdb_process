@@ -9,13 +9,14 @@ def main(args):
 	current_dir = sys.path[0]
 
 	for file in glob.glob(f"{args[1]}/*.ppm"):
-		head, page, col_a, col_b = process(file)
+		head, page, col_a, col_b, original = process(file)
 
 		## Write-out Files
 		page_num = get_page_num(file)
 		current = f"{current_dir}/_pages/page_{page_num}"
 		os.makedirs(current, exist_ok=True)
 
+		cv2.imwrite(f"{current}/{page_num}_original.png", original)
 		cv2.imwrite(f"{current}/{page_num}_head.png", head)
 		cv2.imwrite(f"{current}/{page_num}_page.png", page)
 		cv2.imwrite(f"{current}/{page_num}_col_a.png", col_a)
@@ -59,7 +60,7 @@ def process(file):
 	
 	col_a, col_b = split_cols(page)
 	
-	return (header, page, col_a, col_b)
+	return (header, page, col_a, col_b, img)
 
 
 def split_cols(page):
