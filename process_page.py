@@ -44,19 +44,40 @@ def process(file):
 	headline = lower_bounds[0]
 	pageline = upper_bounds[0]
 
-	# Do DAtA Image Manipulations
-	data_header = data[0:headline,:]
-
 	# Do REAL Image Manipulations
 	header = result[0:headline,:]
 	page = result[pageline:,:]
 
 	write_header(file, header)
-	write_page(file, page)
 
-def write_page(file, page):
+	col_a, col_b = split_cols(page)
+	write_cols(file, (col_a, col_b))
+
+def split_cols(page):
+	data = remove_noise(page)
+
+	x_sum = np.mean(data, axis=0)
+
+	Y,X = data.shape[:2]
+	xth = 10
+
+	end_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x-1]>xth]
+	start_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x+1]>xth]
+
+	end_col_l = end_cols[0]
+	start_col_r = start_cols[0]
+
+	# Do REAL Image Manipulations
+	col_a = page[:,0:end_col_l]
+	col_b = page[:,start_col_r:]
+
+	return (col_a, col_b)
+
+def write_cols(file, cols):
 	page_num = get_page_num(file)
-	cv2.imwrite(f"_pages/page_{page_num}.png", page)
+	col_a, col_b = cols
+	cv2.imwrite(f"_pages/page_{page_num}a.png", col_a)
+	cv2.imwrite(f"_pages/page_{page_num}b.png", col_b)
 
 def write_header(file, header):
 	page_num = get_page_num(file)
