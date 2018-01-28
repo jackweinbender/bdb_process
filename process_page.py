@@ -15,8 +15,8 @@ def main(args):
 		head, page, col_a, col_b, original = process(file)
 
 		if head == []:
-			os.makedirs("_OUTPUT/_PROBLEMS", exist_ok=True)
-			os.rename(file, f"_OUTPUT/_PROBLEMS/{filename}")
+			os.makedirs(f"{current_dir}/_pages/_PROBLEMS", exist_ok=True)
+			os.rename(file, f"{current_dir}/_pages/_PROBLEMS/{filename}")
 			continue
 
 		## Write-out Files
@@ -29,15 +29,19 @@ def main(args):
 		cv2.imwrite(f"{current}/{page_num}_col_a.png", col_a)
 		cv2.imwrite(f"{current}/{page_num}_col_b.png", col_b)
 
-		complete = "_OUTPUT/complete"
+		complete = "_complete"
 		os.makedirs(complete, exist_ok=True)
 		os.rename(file, f"{complete}/{filename}")
 
 def process(file):
 	img = cv2.imread(file, 0)
 
+	## Trim a few px from edges
+	img = trim_edges(img, 5)
+	
 	## Threshold and Box-filter for noise
 	data = remove_noise(img)
+
 	# Deskew
 	data, result = deskew(data, img)
 	# Crop
@@ -60,6 +64,9 @@ def process(file):
 	lower_bounds = [y for y in range(Y-1) if y_sum[y]<=yth and y_sum[y-1]>yth]
 	upper_bounds = [y for y in range(Y-1) if y_sum[y]<=yth and y_sum[y+1]>yth]
 
+	if len(lower_bounds) == 0 or len(upper_bounds) == 0:
+		return ([], [], [], [], [])
+
 	headline = lower_bounds[0]
 	pageline = upper_bounds[0]
 
@@ -73,6 +80,8 @@ def process(file):
 
 	return (header, page, col_a, col_b, cropped)
 
+def trim_edges(img, px_amount):
+	return img[px_amount:-px_amount,px_amount:-px_amount]
 
 def split_cols(page, file):
 	data = remove_noise(page)
