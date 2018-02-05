@@ -7,9 +7,9 @@ test: clean
 	@ python3 process_page.py test_pages
 
 get-images:
-	@ wget https://storage.googleapis.com/dictionary-nearline/bdb_raw.zip
-	@ unzip bdb_raw.zip
-	@ rm -rf bdb_raw.zip
+	@ wget https://storage.googleapis.com/dictionary-nearline/images_raw_ppm.zip
+	@ unzip images_raw_ppm.zip
+	@ rm -rf images_raw_ppm.zip
 
 clean:
 	@ rm -rf _*
