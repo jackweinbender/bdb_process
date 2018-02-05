@@ -1,7 +1,7 @@
 default:
 
 build: clean
-	@ python3 process_page.py images_raw_ppm/01_dictionary
+	@ python3 process_page.py bdb_pages/01_hebrew
 
 test: clean
 	@ python3 process_page.py test_pages

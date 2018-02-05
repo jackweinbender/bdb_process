@@ -8,7 +8,7 @@ import glob, os
 def main(args):
 	current_dir = sys.path[0]
 
-	for file in glob.glob(f"{args[1]}/*.ppm"):
+	for file in glob.glob(f"{args[1]}/*.jp2"):
 		page_num = get_page_num(file)
 		filename = file.split("/")[-1]
 		print(f'Page: {page_num}')
@@ -37,8 +37,7 @@ def process(file):
 	img = cv2.imread(file, 0)
 
 	## Trim a few px from edges
-	img = trim_edges(img, 5)
-	
+	img = trim_edges(img, 50)
 	## Threshold and Box-filter for noise
 	data = remove_noise(img)
 
@@ -48,32 +47,33 @@ def process(file):
 	data, cropped = crop(data, result)
 
 	# Dilation vertical
-	kernel = np.zeros((3,3), dtype=np.uint8)
+	kernel = np.zeros((7,7), dtype=np.uint8)
 	kernel[:,2] = 1
 	data = cv2.dilate(data, kernel, iterations=2)
 	# Dilation Horizontal
-	kernel = np.zeros((5,5), dtype=np.uint8)
+	kernel = np.zeros((9,9), dtype=np.uint8)
 	kernel[2,:] = 1
 	data = cv2.dilate(data, kernel, iterations=3)
 
 	y_sum = np.mean(data, axis=1)
-
+	print(y_sum[-10:])
 	Y,X = data.shape[:2]
-	yth = 0
+	yth = 10
 
-	lower_bounds = [y for y in range(Y-1) if y_sum[y]<=yth and y_sum[y-1]>yth]
-	upper_bounds = [y for y in range(Y-1) if y_sum[y]<=yth and y_sum[y+1]>yth]
+	head_top = [y for y in range(1, Y-1) if y_sum[y]<=yth and y_sum[y+1]>yth]
+	head_botton = [y for y in range(1, Y-1) if y_sum[y]<=yth and y_sum[y-1]>yth]
 
-	if len(lower_bounds) == 0 or len(upper_bounds) == 0:
+	if len(head_botton) == 0 or len(head_top) == 0:
 		return ([], [], [], [], [])
 
-	headline = lower_bounds[0]
-	pageline = upper_bounds[0]
+	headline = head_botton[0]
+	pageline = head_top[1]
+	print(f"Lower: {head_botton}, Upper: {head_top}")
 
 	# Do REAL Image Manipulations
 	header = cropped[0:headline,:]
 	page = cropped[pageline:,:]
-	
+
 	col_a, col_b = split_cols(page, file)
 	if col_a == [] or col_b == []:
 		return ([], [], [], [], [])
@@ -93,8 +93,8 @@ def split_cols(page, file):
 
 	
 
-	end_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x-1]>xth and x > 420 and x < 460]
-	start_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x+1]>xth and x > 440 and x < 480]
+	end_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x-1]>xth]
+	start_cols = [x for x in range(X-1) if x_sum[x]<=xth and x_sum[x+1]>xth]
 
 	print(end_cols, start_cols)
 
@@ -124,9 +124,9 @@ def get_page_num(file):
 
 def remove_noise(data):
 	data = cv2.medianBlur(data, 9)
-	th, data = cv2.threshold(data, 55, 255, cv2.THRESH_BINARY_INV|cv2.THRESH_OTSU)
+	th, data = cv2.threshold(data, 200, 255, cv2.THRESH_BINARY_INV|cv2.THRESH_OTSU)
 	data = cv2.boxFilter(data, -1, (30,30))
-	th, data = cv2.threshold(data, 25, 255, cv2.THRESH_BINARY)
+	th, data = cv2.threshold(data, 50, 255, cv2.THRESH_BINARY)
 	return data
 
 def deskew(data, img):
